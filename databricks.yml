@@ -1,0 +1,32 @@
+bundle:
+  name: job-market-mvp
+
+workspace:
+  # replace with your workspace URL
+  host: https://adb-7405606401068884.4.azuredatabricks.net
+
+targets:
+  dev:
+    default: true
+
+resources:
+  jobs:
+    hello_job_market:
+      name: hello-job-market
+
+      job_clusters:
+        - job_cluster_key: single_node
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            num_workers: 0
+            node_type_id: Standard_DS3_v2
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            autotermination_minutes: 15
+
+      tasks:
+        - task_key: hello_task
+          spark_python_task:
+            python_file: ../src/hello.py
+          job_cluster_key: single_node
