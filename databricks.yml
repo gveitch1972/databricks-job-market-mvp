@@ -1,32 +1,44 @@
+# This is a Databricks asset bundle definition for databricks_job_market_mvp.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
 bundle:
-  name: job-market-mvp
+  name: databricks_job_market_mvp
+  uuid: 285b3c08-7b89-4d2a-9632-75893ac4e862
 
-workspace:
-  # replace with your workspace URL
-  host: https://adb-7405606401068884.4.azuredatabricks.net
+include:
+  - resources/*.yml
+  - resources/*/*.yml
+
+# Variable declarations. These variables are assigned in the dev/prod targets below.
+variables:
+  catalog:
+    description: The catalog to use
+  schema:
+    description: The schema to use
 
 targets:
   dev:
+    # The default target uses 'mode: development' to create a development copy.
+    # - Deployed resources get prefixed with '[dev my_user_name]'
+    # - Any job schedules and triggers are paused by default.
+    # See also https://docs.databricks.com/dev-tools/bundles/deployment-modes.html.
+    mode: development
     default: true
-
-resources:
-  jobs:
-    hello_job_market:
-      name: hello-job-market
-
-      job_clusters:
-        - job_cluster_key: single_node
-          new_cluster:
-            spark_version: 15.4.x-scala2.12
-            num_workers: 0
-            node_type_id: Standard_DS3_v2
-            spark_conf:
-              spark.databricks.cluster.profile: singleNode
-              spark.master: local[*]
-            autotermination_minutes: 15
-
-      tasks:
-        - task_key: hello_task
-          spark_python_task:
-            python_file: ../src/hello.py
-          job_cluster_key: single_node
+    workspace:
+      host: https://adb-7405606401068884.4.azuredatabricks.net
+    variables:
+      catalog: jobmarket
+      schema: dev
+    presets:
+      artifacts_dynamic_version: true
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405606401068884.4.azuredatabricks.net
+      # We explicitly deploy to /Workspace/Users/microsoft@grahamveitch.com to make sure we only have a single copy.
+      root_path: /Workspace/Users/microsoft@grahamveitch.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: jobmarket
+      schema: prod
+    permissions:
+      - user_name: microsoft@grahamveitch.com
+        level: CAN_MANAGE

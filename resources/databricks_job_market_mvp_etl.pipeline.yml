@@ -1,0 +1,19 @@
+# The main pipeline for databricks_job_market_mvp
+
+resources:
+  pipelines:
+    databricks_job_market_mvp_etl:
+      name: databricks_job_market_mvp_etl
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      root_path: "../src/databricks_job_market_mvp_etl"
+
+      libraries:
+        - glob:
+            include: ../src/databricks_job_market_mvp_etl/transformations/**
+
+      environment:
+        dependencies:
+          # We include every dependency defined by pyproject.toml by defining an editable environment
+          # that points to the folder where pyproject.toml is deployed.
+          - --editable ${workspace.file_path}
