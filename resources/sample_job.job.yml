@@ -26,11 +26,6 @@ resources:
           notebook_task:
             notebook_path: ../src/sample_notebook.ipynb
           job_cluster_key: job_cluster
-        - task_key: refresh_pipeline
-          depends_on:
-            - task_key: notebook_task
-          pipeline_task:
-            pipeline_id: ${resources.pipelines.databricks_job_market_mvp_etl.id}
 
       job_clusters:
         - job_cluster_key: job_cluster
