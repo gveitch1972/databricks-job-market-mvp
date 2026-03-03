@@ -7,7 +7,7 @@ resources:
 
       tasks:
         - task_key: ingest
-          existing_cluster_id: 0301-140106-2vpc0rse
+          existing_cluster_id: ${var.dev_cluster_id}
           spark_python_task:
             python_file: ../src/ingest_adzuna.py
             parameters:

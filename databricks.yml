@@ -16,7 +16,9 @@ variables:
     description: The schema to use
   bronze_table:
     description: "Fully-qualified Bronze table for Adzuna raw ingestion"
-    default: "jobmarket.bronze.adzuna_jobs_raw" 
+    default: "jobmarket.bronze.adzuna_jobs_raw"
+  dev_cluster_id:
+    default: "0301-140106-2vpc0rse"
 
 targets:
   dev:

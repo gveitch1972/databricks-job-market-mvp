@@ -1,0 +1,15 @@
+resources:
+  jobs:
+    ingest_rss_existing_cluster:
+      name: ingest_rss_existing_cluster
+
+      tasks:
+        - task_key: ingest
+          existing_cluster_id: ${var.dev_cluster_id}
+
+          spark_python_task:
+            python_file: ../src/ingest_rss_jobs.py
+
+          libraries:
+            - pypi:
+                package: feedparser
