@@ -27,13 +27,15 @@ resources:
           spark_python_task:
             python_file: ../src/hello.py
 
-    job_clusters:
-      - job_cluster_key: job_cluster
-        new_cluster:
-          spark_version: 16.4.x-scala2.12
-          node_type_id: Standard_D4ds_v4
-          num_workers: 0
-          spark_conf:
-            spark.databricks.cluster.profile: singleNode
-          custom_tags:
-            ResourceClass: SingleNode
+      job_clusters:
+        - job_cluster_key: job_cluster
+          new_cluster:
+            spark_version: 16.4.x-scala2.12
+            node_type_id: Standard_D4ds_v4
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode

@@ -6,3 +6,5 @@ print("🚀 Job Market MVP pipeline is alive!")
 
 df = spark.range(5)
 df.show()
+df = df.withColumnRenamed("id", "job_id")
+df.show()
