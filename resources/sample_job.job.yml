@@ -22,17 +22,18 @@ resources:
           default: ${var.schema}
 
       tasks:
-        - task_key: notebook_task
-          notebook_task:
-            notebook_path: ../src/sample_notebook.ipynb
+        - task_key: run_hello
           job_cluster_key: job_cluster
+          spark_python_task:
+            python_file: ../src/hello.py
 
-      job_clusters:
-        - job_cluster_key: job_cluster
-          new_cluster:
-            spark_version: 16.4.x-scala2.12
-            node_type_id: Standard_D3_v2
-            data_security_mode: SINGLE_USER
-            autoscale:
-              min_workers: 1
-              max_workers: 4
+    job_clusters:
+      - job_cluster_key: job_cluster
+      new_cluster:
+        spark_version: 16.4.x-scala2.12
+        node_type_id: Standard_D4ds_v4
+        num_workers: 0
+        spark_conf:
+          spark.databricks.cluster.profile: singleNode
+        custom_tags:
+          ResourceClass: SingleNode
