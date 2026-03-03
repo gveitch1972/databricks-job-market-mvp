@@ -1,0 +1,15 @@
+# A sample job for databricks_job_market_mvp.
+
+resources:
+  jobs:
+    ingest_existing_cluster:
+      name: ingest_existing_cluster
+
+      tasks:
+        - task_key: ingest
+          existing_cluster_id: 0301-140106-2vpc0rse
+          spark_python_task:
+            python_file: ../src/ingest_adzuna.py
+            parameters:
+              - --bronze-table
+              - jobmarket.bronze.adzuna_jobs_raw

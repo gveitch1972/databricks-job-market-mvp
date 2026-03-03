@@ -1,0 +1,243 @@
+2026-03-03 17:06:23 "[dev microsoft] sample_job" RUNNING
+2026-03-03 17:11:17 "[dev microsoft] sample_job" INTERNAL_ERROR FAILED Task ingest_adzuna failed with message: Workload failed, see run output for details.
+Task ingest_adzuna FAILED:
+[CANNOT_MERGE_TYPE] Can not merge type `DoubleType` and `LongType`.
+---------------------------------------------------------------------------
+PySparkTypeError                          Traceback (most recent call last)
+File ~/.ipykernel/1094/command--1-2958350084:8
+      5 del sys
+      7 with open(filename, "rb") as f:
+----> 8   exec(compile(f.read(), filename, 'exec'))
+
+File /Workspace/Users/microsoft@grahamveitch.com/.bundle/databricks_job_market_mvp/dev/files/src/ingest_adzuna.py:140
+    136     df.select("adzuna_id", "title", "company", "location", "created_ts", "run_date").show(10, truncate=False)
+    139 if __name__ == "__main__":
+--> 140     main()
+
+File /Workspace/Users/microsoft@grahamveitch.com/.bundle/databricks_job_market_mvp/dev/files/src/ingest_adzuna.py:121, in main()
+     96 for r in all_results:
+     97     rows.append(
+     98         {
+     99             "adzuna_id": r.get("id"),
+   (...)
+    118         }
+    119     )
+--> 121 df = spark.createDataFrame(rows)
+    123 # Parse created timestamp if present
+    124 df = df.withColumn("created_ts", to_timestamp(col("created")))
+
+File /databricks/spark/python/pyspark/instrumentation_utils.py:47, in _wrap_function.<locals>.wrapper(*args, **kwargs)
+     45 start = time.perf_counter()
+     46 try:
+---> 47     res = func(*args, **kwargs)
+     48     logger.log_success(
+     49         module_name, class_name, function_name, time.perf_counter() - start, signature
+     50     )
+     51     return res
+
+File /databricks/spark/python/pyspark/sql/session.py:1648, in SparkSession.createDataFrame(self, data, schema, samplingRatio, verifySchema)
+   1643 if has_pyarrow and isinstance(data, pa.Table):
+   1644     # Create a DataFrame from PyArrow Table.
+   1645     return super(SparkSession, self).createDataFrame(  # type: ignore[call-overload]
+   1646         data, schema, samplingRatio, verifySchema
+   1647     )
+-> 1648 return self._create_dataframe(
+   1649     data, schema, samplingRatio, verifySchema  # type: ignore[arg-type]
+   1650 )
+
+File /databricks/spark/python/pyspark/sql/session.py:1705, in SparkSession._create_dataframe(self, data, schema, samplingRatio, verifySchema)
+   1703     rdd, struct = self._createFromRDD(data.map(prepare), schema, samplingRatio)
+   1704 else:
+-> 1705     rdd, struct = self._createFromLocal(map(prepare, data), schema)
+   1706 jrdd = self._jvm.SerDeUtil.toJavaArray(rdd._to_java_object_rdd())
+   1707 jdf = self._jsparkSession.applySchemaToPythonRDD(jrdd.rdd(), struct.json())
+
+File /databricks/spark/python/pyspark/sql/session.py:1225, in SparkSession._createFromLocal(self, data, schema)
+   1217 def _createFromLocal(
+   1218     self, data: Iterable[Any], schema: Optional[Union[DataType, List[str]]]
+   1219 ) -> Tuple["RDD[Tuple]", StructType]:
+   1220     """
+   1221     Create an RDD for DataFrame from a list or pandas.DataFrame, returns the RDD and schema.
+   1222     This would be broken with table acl enabled as user process does not have permission to
+   1223     write temp files.
+   1224     """
+-> 1225     internal_data, struct = self._wrap_data_schema(data, schema)
+   1226     return self._sc.parallelize(internal_data), struct
+
+File /databricks/spark/python/pyspark/sql/session.py:1192, in SparkSession._wrap_data_schema(self, data, schema)
+   1189     data = list(data)
+   1191 if schema is None or isinstance(schema, (list, tuple)):
+-> 1192     struct = self._inferSchemaFromList(data, names=schema)
+   1193     converter = _create_converter(struct)
+   1194     tupled_data: Iterable[Tuple] = map(converter, data)
+
+File /databricks/spark/python/pyspark/sql/session.py:1057, in SparkSession._inferSchemaFromList(self, data, names)
+   1055 infer_map_from_first_pair = self._jconf.legacyInferMapStructTypeFromFirstItem()
+   1056 prefer_timestamp_ntz = is_timestamp_ntz_preferred()
+-> 1057 schema = reduce(
+   1058     _merge_type,
+   1059     (
+   1060         _infer_schema(
+   1061             row,
+   1062             names,
+   1063             infer_dict_as_struct=infer_dict_as_struct,
+   1064             infer_array_from_first_element=infer_array_from_first_element,
+   1065             infer_map_from_first_pair=infer_map_from_first_pair,
+   1066             prefer_timestamp_ntz=prefer_timestamp_ntz,
+   1067         )
+   1068         for row in data
+   1069     ),
+   1070 )
+   1071 if _has_nulltype(schema):
+   1072     raise PySparkValueError(
+   1073         errorClass="CANNOT_DETERMINE_TYPE",
+   1074         messageParameters={},
+   1075     )
+
+File /databricks/spark/python/pyspark/sql/types.py:2622, in _merge_type(a, b, name)
+   2618 if isinstance(a, StructType):
+   2619     nfs = dict((f.name, f.dataType) for f in cast(StructType, b).fields)
+   2620     fields = [
+   2621         StructField(
+-> 2622             f.name, _merge_type(f.dataType, nfs.get(f.name, NullType()), name=new_name(f.name))
+   2623         )
+   2624         for f in a.fields
+   2625     ]
+   2626     names = set([f.name for f in fields])
+   2627     for n in nfs:
+
+File /databricks/spark/python/pyspark/sql/types.py:2612, in _merge_type(a, b, name)
+   2609     return a
+   2610 elif type(a) is not type(b):
+   2611     # TODO: type cast (such as int -> long)
+-> 2612     raise PySparkTypeError(
+   2613         errorClass="CANNOT_MERGE_TYPE",
+   2614         messageParameters={"data_type1": type(a).__name__, "data_type2": type(b).__name__},
+   2615     )
+   2617 # same type
+   2618 if isinstance(a, StructType):
+
+PySparkTypeError: [CANNOT_MERGE_TYPE] Can not merge type `DoubleType` and `LongType`.
+
+Error: Task ingest_adzuna failed!
+Error:
+[CANNOT_MERGE_TYPE] Can not merge type `DoubleType` and `LongType`.
+Trace:
+---------------------------------------------------------------------------
+PySparkTypeError                          Traceback (most recent call last)
+File ~/.ipykernel/1094/command--1-2958350084:8
+      5 del sys
+      7 with open(filename, "rb") as f:
+----> 8   exec(compile(f.read(), filename, 'exec'))
+
+File /Workspace/Users/microsoft@grahamveitch.com/.bundle/databricks_job_market_mvp/dev/files/src/ingest_adzuna.py:140
+    136     df.select("adzuna_id", "title", "company", "location", "created_ts", "run_date").show(10, truncate=False)
+    139 if __name__ == "__main__":
+--> 140     main()
+
+File /Workspace/Users/microsoft@grahamveitch.com/.bundle/databricks_job_market_mvp/dev/files/src/ingest_adzuna.py:121, in main()
+     96 for r in all_results:
+     97     rows.append(
+     98         {
+     99             "adzuna_id": r.get("id"),
+   (...)
+    118         }
+    119     )
+--> 121 df = spark.createDataFrame(rows)
+    123 # Parse created timestamp if present
+    124 df = df.withColumn("created_ts", to_timestamp(col("created")))
+
+File /databricks/spark/python/pyspark/instrumentation_utils.py:47, in _wrap_function.<locals>.wrapper(*args, **kwargs)
+     45 start = time.perf_counter()
+     46 try:
+---> 47     res = func(*args, **kwargs)
+     48     logger.log_success(
+     49         module_name, class_name, function_name, time.perf_counter() - start, signature
+     50     )
+     51     return res
+
+File /databricks/spark/python/pyspark/sql/session.py:1648, in SparkSession.createDataFrame(self, data, schema, samplingRatio, verifySchema)
+   1643 if has_pyarrow and isinstance(data, pa.Table):
+   1644     # Create a DataFrame from PyArrow Table.
+   1645     return super(SparkSession, self).createDataFrame(  # type: ignore[call-overload]
+   1646         data, schema, samplingRatio, verifySchema
+   1647     )
+-> 1648 return self._create_dataframe(
+   1649     data, schema, samplingRatio, verifySchema  # type: ignore[arg-type]
+   1650 )
+
+File /databricks/spark/python/pyspark/sql/session.py:1705, in SparkSession._create_dataframe(self, data, schema, samplingRatio, verifySchema)
+   1703     rdd, struct = self._createFromRDD(data.map(prepare), schema, samplingRatio)
+   1704 else:
+-> 1705     rdd, struct = self._createFromLocal(map(prepare, data), schema)
+   1706 jrdd = self._jvm.SerDeUtil.toJavaArray(rdd._to_java_object_rdd())
+   1707 jdf = self._jsparkSession.applySchemaToPythonRDD(jrdd.rdd(), struct.json())
+
+File /databricks/spark/python/pyspark/sql/session.py:1225, in SparkSession._createFromLocal(self, data, schema)
+   1217 def _createFromLocal(
+   1218     self, data: Iterable[Any], schema: Optional[Union[DataType, List[str]]]
+   1219 ) -> Tuple["RDD[Tuple]", StructType]:
+   1220     """
+   1221     Create an RDD for DataFrame from a list or pandas.DataFrame, returns the RDD and schema.
+   1222     This would be broken with table acl enabled as user process does not have permission to
+   1223     write temp files.
+   1224     """
+-> 1225     internal_data, struct = self._wrap_data_schema(data, schema)
+   1226     return self._sc.parallelize(internal_data), struct
+
+File /databricks/spark/python/pyspark/sql/session.py:1192, in SparkSession._wrap_data_schema(self, data, schema)
+   1189     data = list(data)
+   1191 if schema is None or isinstance(schema, (list, tuple)):
+-> 1192     struct = self._inferSchemaFromList(data, names=schema)
+   1193     converter = _create_converter(struct)
+   1194     tupled_data: Iterable[Tuple] = map(converter, data)
+
+File /databricks/spark/python/pyspark/sql/session.py:1057, in SparkSession._inferSchemaFromList(self, data, names)
+   1055 infer_map_from_first_pair = self._jconf.legacyInferMapStructTypeFromFirstItem()
+   1056 prefer_timestamp_ntz = is_timestamp_ntz_preferred()
+-> 1057 schema = reduce(
+   1058     _merge_type,
+   1059     (
+   1060         _infer_schema(
+   1061             row,
+   1062             names,
+   1063             infer_dict_as_struct=infer_dict_as_struct,
+   1064             infer_array_from_first_element=infer_array_from_first_element,
+   1065             infer_map_from_first_pair=infer_map_from_first_pair,
+   1066             prefer_timestamp_ntz=prefer_timestamp_ntz,
+   1067         )
+   1068         for row in data
+   1069     ),
+   1070 )
+   1071 if _has_nulltype(schema):
+   1072     raise PySparkValueError(
+   1073         errorClass="CANNOT_DETERMINE_TYPE",
+   1074         messageParameters={},
+   1075     )
+
+File /databricks/spark/python/pyspark/sql/types.py:2622, in _merge_type(a, b, name)
+   2618 if isinstance(a, StructType):
+   2619     nfs = dict((f.name, f.dataType) for f in cast(StructType, b).fields)
+   2620     fields = [
+   2621         StructField(
+-> 2622             f.name, _merge_type(f.dataType, nfs.get(f.name, NullType()), name=new_name(f.name))
+   2623         )
+   2624         for f in a.fields
+   2625     ]
+   2626     names = set([f.name for f in fields])
+   2627     for n in nfs:
+
+File /databricks/spark/python/pyspark/sql/types.py:2612, in _merge_type(a, b, name)
+   2609     return a
+   2610 elif type(a) is not type(b):
+   2611     # TODO: type cast (such as int -> long)
+-> 2612     raise PySparkTypeError(
+   2613         errorClass="CANNOT_MERGE_TYPE",
+   2614         messageParameters={"data_type1": type(a).__name__, "data_type2": type(b).__name__},
+   2615     )
+   2617 # same type
+   2618 if isinstance(a, StructType):
+
+PySparkTypeError: [CANNOT_MERGE_TYPE] Can not merge type `DoubleType` and `LongType`.
+Error: failed to reach TERMINATED or SKIPPED, got INTERNAL_ERROR: Task ingest_adzuna failed with message: Workload failed, see run output for details.
+(base) Freddie:databricks-job-market-mvp G$ 

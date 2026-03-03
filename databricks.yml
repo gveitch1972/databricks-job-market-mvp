@@ -14,6 +14,9 @@ variables:
     description: The catalog to use
   schema:
     description: The schema to use
+  bronze_table:
+    description: "Fully-qualified Bronze table for Adzuna raw ingestion"
+    default: "jobmarket.bronze.adzuna_jobs_raw" 
 
 targets:
   dev:

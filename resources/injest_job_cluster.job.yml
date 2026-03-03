@@ -2,30 +2,17 @@
 
 resources:
   jobs:
-    sample_job:
-      name: sample_job
-
-      trigger:
-        # Run this job every day, exactly one day from the last run; see https://docs.databricks.com/api/workspace/jobs/create#trigger
-        periodic:
-          interval: 1
-          unit: DAYS
-
-      #email_notifications:
-      #  on_failure:
-      #    - your_email@example.com
-
-      parameters:
-        - name: catalog
-          default: ${var.catalog}
-        - name: schema
-          default: ${var.schema}
+    ingest_job_cluster:
+      name: ingest_job_cluster
 
       tasks:
-        - task_key: run_hello
+        - task_key: ingest
           job_cluster_key: job_cluster
           spark_python_task:
-            python_file: ../src/hello.py
+            python_file: ../src/ingest_adzuna.py
+            parameters:
+              - --bronze-table
+              - jobmarket.bronze.adzuna_jobs_raw
 
       job_clusters:
         - job_cluster_key: job_cluster
